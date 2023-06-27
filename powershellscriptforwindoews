@@ -1,0 +1,26 @@
+<powershell>
+    #$command = "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12"
+    #Invoke-Expression $command
+    #Invoke-WebRequest -Uri "https://awscli.amazonaws.com/AWSCLIV2.msi" -Outfile C:\AWSCLIV2.msi
+    #$arguments = "/i `"C:\AWSCLIV2.msi`" /quiet"
+    #Start-Process msiexec.exe -ArgumentList $arguments -Wait
+    #$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine")
+    #aws s3 cp s3://vzmmp2-outpost-amitest/Crowdstrike/WindowsSensor.exe C:\
+    #C:\WindowsSensor.exe /install /quiet /norestart CID=AD458EA09AA242C992A357AFEC00E0C9-C9 ProvNoWait=1 GROUPING_TAGS="location_zipcode/${local.default_tags.location_zipcode},resource_type/${local.default_tags.resource_type},mec_type/${local.default_tags.mec_type},csp/${local.default_tags.csp},ecpd_id/${local.default_tags.ecpd_id},resource_id/${local.default_tags.resource_id},cloud_region/${local.default_tags.cloud_region},entity_name/${local.default_tags.entity_name},created_date/${local.default_tags.created_date},created_name/${local.default_tags.created_name}"
+    aws s3 cp s3://vzmmp2-outpost-amitest/Tenable/Tenable_Nessus_Install.ps1 C:\X86.Orchestration\Tenable_Nessus\Tenable_Nessus_Install.ps1
+    aws s3 cp s3://vzmmp2-outpost-amitest/Tenable/NessusAgent-10.3.1-x64.msi C:\X86.Orchestration\Tenable_Nessus\NessusAgent-10.3.1-x64.msi
+    Set-ExecutionPolicy -Scope LocalMachine RemoteSigned -Force
+    Unblock-File -Path C:\X86.Orchestration\Tenable_Nessus\Tenable_Nessus_Install.ps1
+    C:\X86.Orchestration\Tenable_Nessus\Tenable_Nessus_Install.ps1 -Action Install -Group VZNITPMEC-NONPROD 
+    $ipv4 = Get-NetIPAddress -AddressFamily IPv4 -InterfaceIndex $(Get-NetConnectionProfile | Select-Object -ExpandProperty InterfaceIndex) | Select-Object -ExpandProperty IPAddress
+    $ipv4 = $ipv4.Replace(".","-")
+    $hostname = $ipv4
+    $Domain = "mmp2.vzmec.com"
+    [string]$SecretAD = "AD/Credentials"
+    $SecretObj = (Get-SECSecretValue -SecretId $SecretAD)
+    [PSCustomObject]$Secret = ($SecretObj.SecretString  | ConvertFrom-Json)
+    $password = $Secret.awsSeamlessDomainPassword | ConvertTo-SecureString -asPlainText -Force
+    $username = $Secret.awsSeamlessDomainUsername + "@" + $Domain
+    $credential = New-Object System.Management.Automation.PSCredential($username,$password)
+    Add-Computer -DomainName $Domain -NewName $hostname -Credential $credential -Restart -Force
+</powershell>
